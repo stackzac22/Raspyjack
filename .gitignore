@@ -1,3 +1,38 @@
 RPi/
 __pycache__/
+
+# --- device-specific / personal config (protect your info) ---
 gui_conf.json
+*.bak
+*.tmp
+*.swp
+
+# --- secrets & keys (never commit) ---
+*.pem
+*.key
+id_rsa*
+*.env
+.env
+discord_webhook_local.txt
+
+# --- captured loot / live-engagement data (keep shipped samples, ignore new captures) ---
+loot/payload.log
+loot/**/*.pcap
+loot/**/*.pcapng
+loot/**/*.cap
+loot/**/*.hccapx
+loot/**/*.hash
+loot/**/*.john
+loot/**/*.potfile
+loot/**/*.xml
+loot/Responder/
+loot/Handshakes/
+loot/Credentials/
+loot/Screenshots/
+
+# --- stored wifi credentials ---
+wifi/configs/
+*.wpa_supplicant.conf
+
+# --- frame mirrors / runtime scratch ---
+*.frame
