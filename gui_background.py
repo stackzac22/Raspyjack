@@ -25,13 +25,14 @@ module never scales (the caller already works in scaled pixels).
 import os
 from PIL import Image, ImageDraw
 
-# Tasteful default: a subtle dark gradient that still reads as the green theme.
+# Default: the shipped top-hat skull image (assets/bg.png), kept legible with a
+# light scrim. Falls back to the gradient colours below if the image is missing.
 DEFAULTS = {
-    "mode": "gradient",
+    "mode": "image",
     "image_path": "assets/bg.png",
     "gradient_top": "#0a1410",
     "gradient_bottom": "#02160a",
-    "scrim": 0.30,
+    "scrim": 0.20,
 }
 
 VALID_MODES = ("none", "gradient", "image")
