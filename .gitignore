@@ -15,6 +15,15 @@ id_rsa*
 .env
 discord_webhook_local.txt
 
+# device-generated secrets / tokens (WebUI, Wigle, Tailscale, etc.)
+.webui_token
+.webui_auth.json
+.webui_session_secret
+.wigle_credentials.json
+.tailscale_auth_key
+*_credentials.json
+*.authkey
+
 # --- captured loot / live-engagement data (keep shipped samples, ignore new captures) ---
 loot/payload.log
 loot/**/*.pcap
