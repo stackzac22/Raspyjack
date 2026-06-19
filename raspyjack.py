@@ -14,6 +14,7 @@ from subprocess import STDOUT, check_output
 from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageSequence, ImageOps
 import LCD_Config
 import LCD_1in44
+import gui_background  # themed menu background (gradient / image / none)
 import RPi.GPIO as GPIO
 import socket
 import ipaddress
@@ -358,6 +359,24 @@ class Defaults():
     payload_log  = install_path + "loot/payload.log"
 
 
+### Themed background state (loaded from gui_conf.json "BACKGROUND" section) ###
+_bg_config = gui_background.normalize(None)   # defaults until LoadConfig runs
+_bg_layer = None                              # None => stock solid background
+_bg_scrim = _bg_config["scrim"]
+
+def _rebuild_bg_layer():
+    """(Re)build the cached background layer for the current panel size."""
+    global _bg_layer, _bg_scrim
+    _bg_scrim = _bg_config.get("scrim", 0.30)
+    try:
+        _bg_layer = gui_background.build_layer(
+            LCD.width, LCD.height, _bg_config, base_dir=default.install_path
+        )
+    except Exception as e:
+        print(f"[bg] failed to build background layer: {e}")
+        _bg_layer = None
+
+
 ### Color scheme class ###
 class template():
     # Color values
@@ -381,7 +400,13 @@ class template():
 
     # Render inside of the border
     def DrawMenuBackground(self):
-        draw.rectangle((S(3), S(14), _SCR_W - S(4), _SCR_H - S(4)), fill=self.background)
+        x0, y0, x1, y1 = S(3), S(14), _SCR_W - S(4), _SCR_H - S(4)
+        if _bg_layer is None:
+            # Stock look: solid theme background colour.
+            draw.rectangle((x0, y0, x1, y1), fill=self.background)
+        else:
+            # Themed background (gradient / image) rendered underneath the menu.
+            gui_background.paint_region(image, (x0, y0, x1, y1), _bg_layer, _bg_scrim)
         mark_display_dirty()
 
     # I don't know how to python pass 'class.variable' as reference properly
@@ -979,6 +1004,7 @@ def SaveConfig() -> None:
             "SCREENSAVER_GIF": default.screensaver_gif,
         },
         "COLORS": color.Dictonary(),
+        "BACKGROUND": dict(_bg_config),
         "LOCK":   {
             "enabled": bool(lock_config.get("enabled")),
             "mode": _lock_mode(),
@@ -1011,6 +1037,7 @@ def LoadConfig():
     global _flip_enabled
     global _random_screensaver
     global _show_clock
+    global _bg_config
 
     if not (os.path.exists(default.config_file) and os.path.isfile(default.config_file)):
         print("Can't find a config file! Creating one at '" + default.config_file + "'...")
@@ -1031,6 +1058,8 @@ def LoadConfig():
             color.LoadDictonary(data["COLORS"])
         except:
             pass
+        _bg_config = gui_background.normalize(data.get("BACKGROUND"))
+        _rebuild_bg_layer()
         GPIO.setmode(GPIO.BCM)
         for item in PINS:
             GPIO.setup(PINS[item], GPIO.IN, pull_up_down=GPIO.PUD_UP)
