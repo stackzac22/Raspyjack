@@ -161,11 +161,14 @@ data/output/zombies/
 
 # Runtime data files (generated during execution)
 data/ragnar.db
+data/ragnar_auth.db
 data/livestatus.csv
 data/netkb.csv
+data/*.migrated_backup
 data/pwnagotchi_status.json
 data/logs/temp_log.txt
 data/networks/*/db/*.db
+data/networks/*/ssid.txt
 data/networks/*/intelligence/*.json
 data/networks/*/threat_intelligence/*.json
 data/networks/*/loot/data_stolen/
@@ -181,7 +184,7 @@ data/threat_intelligence/threat_cache.json
 data/networks/*/threat_intelligence/enriched_findings.json
 data/networks/*/threat_intelligence/sources_config.json
 data/networks/*/threat_intelligence/threat_cache.json
-data/network_data/network_unknown_network.csv
+data/network_data/network_*.csv
 
 # User dictionaries (may contain custom wordlists)
 data/input/dictionary/passwords.txt
