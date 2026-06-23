@@ -79,7 +79,12 @@ if flask_cors_available:
     CORS(app)
 
 # Initialize SocketIO for real-time updates
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+# manage_session=False: let Flask own the (cookie) session so HTTP login state is
+# visible to Socket.IO handlers. Also avoids flask-socketio's managed-session path,
+# which assigns ctx.session — read-only in Werkzeug >= 3.1 (AttributeError, breaks
+# every socket connect).
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading',
+                    manage_session=False)
 
 # ============================================================================
 # AUTHENTICATION MIDDLEWARE
