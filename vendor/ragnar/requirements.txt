@@ -13,6 +13,11 @@ pysmb>=1.2.0
 pymysql>=1.0.0
 sqlalchemy>=1.4.0
 python-nmap>=0.7.0
+# NOTE: flask-socketio's default manage_session=True is INCOMPATIBLE with
+# Werkzeug >= 3.1 (which Flask >= 3.1 pulls in): its connect path assigns
+# ctx.session, now read-only -> AttributeError on every socket connect, which
+# silently kills all real-time updates. webapp_modern.py constructs SocketIO with
+# manage_session=False to avoid this; do not remove that without re-testing sockets.
 flask>=3.0.0
 flask-socketio>=5.3.0
 flask-cors>=4.0.0

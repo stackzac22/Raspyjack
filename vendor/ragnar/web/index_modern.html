@@ -710,6 +710,31 @@
                 </div>
             </div>
 
+            <!-- Live Activity Feed -->
+            <div class="glass rounded-xl p-6 mb-8">
+                <h2 class="text-xl font-bold mb-4 stackable-row">
+                    <span class="flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-Ragnar-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Live Activity
+                        <span id="activity-feed-count" class="ml-2 text-xs px-2 py-1 bg-Ragnar-900 bg-opacity-60 rounded-full text-Ragnar-300">0</span>
+                    </span>
+                    <div class="flex space-x-2">
+                        <button id="activity-pause-btn" onclick="toggleActivityPause()" class="text-sm text-white bg-Ragnar-600 hover:bg-Ragnar-700 px-3 py-1 rounded transition-colors">
+                            Pause
+                        </button>
+                        <button onclick="clearActivityFeed()" class="text-sm text-gray-400 hover:text-white transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </h2>
+                <p class="text-xs text-gray-500 mb-3">Watch Ragnar work in real time — discoveries, credentials, attacks and AI commentary as they happen. With an OpenAI key set in Config, the AI Insights panel above analyzes these findings.</p>
+                <div id="activity-feed" class="bg-black bg-opacity-50 rounded-lg p-4 h-96 overflow-y-auto scrollbar-thin space-y-1">
+                    <div class="text-gray-500 text-center py-8">Waiting for Ragnar activity…</div>
+                </div>
+            </div>
+
             <!-- Report Export Bar -->
             <div class="glass rounded-xl p-4 mb-6 flex items-center justify-between">
                 <div>
@@ -741,7 +766,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Console Log -->
             <div class="glass rounded-xl p-6">
                 <h2 class="text-xl font-bold mb-4 stackable-row">

@@ -592,6 +592,7 @@ function initializeSocket() {
 
         socket.emit('request_status');
         socket.emit('request_logs');
+        socket.emit('request_activity');
         refreshPwnagotchiStatus({ silent: true });
     });
 
@@ -690,6 +691,10 @@ function initializeSocket() {
 
     socket.on('manual_attack_update', function(data) {
         handleManualAttackUpdate(data);
+    });
+
+    socket.on('activity_update', function(entries) {
+        appendActivity(entries);
     });
 
     socket.on('connect_error', function(error) {
@@ -9601,6 +9606,18 @@ const HISTORY_LOG_TYPE_COLORS = {
     'info': 'text-gray-300'
 };
 
+// Live Activity Feed (socket 'activity_update') — narrative of what Ragnar is doing
+const MAX_ACTIVITY_ENTRIES = 200;
+const ACTIVITY_SEVERITY_COLORS = {
+    'critical': 'text-red-300',
+    'error': 'text-red-400',
+    'warning': 'text-yellow-300',
+    'success': 'text-green-400',
+    'info': 'text-gray-200'
+};
+let activityBuffer = [];
+let activityPaused = false;
+
 let consoleBuffer = [];
 let lastConsoleLogLine = null;
 
@@ -9749,6 +9766,104 @@ function clearConsole() {
     const console = document.getElementById('console-output');
     if (console) {
         console.innerHTML = '<div class="text-green-400">Console cleared</div>';
+    }
+}
+
+// ============================================================================
+// LIVE ACTIVITY FEED
+// ============================================================================
+
+function appendActivity(entries) {
+    if (!Array.isArray(entries) || entries.length === 0) {
+        return;
+    }
+    if (activityPaused) {
+        return;
+    }
+
+    let added = false;
+    entries.forEach(entry => {
+        if (!entry || !entry.message) {
+            return;
+        }
+        // Skip consecutive duplicates (the live broadcast repeats Ragnar's
+        // current commentary every few seconds until it changes).
+        const last = activityBuffer[activityBuffer.length - 1];
+        if (last && last.message === entry.message && last.icon === entry.icon) {
+            return;
+        }
+        activityBuffer.push({
+            timestamp: entry.timestamp || '',
+            icon: entry.icon || '•',
+            message: String(entry.message),
+            details: entry.details ? String(entry.details) : '',
+            severity: entry.severity || 'info'
+        });
+        added = true;
+    });
+
+    if (!added) {
+        return;
+    }
+    if (activityBuffer.length > MAX_ACTIVITY_ENTRIES) {
+        activityBuffer = activityBuffer.slice(-MAX_ACTIVITY_ENTRIES);
+    }
+    renderActivityFeed();
+}
+
+function renderActivityFeed() {
+    const feed = document.getElementById('activity-feed');
+    if (!feed) return;
+
+    const countEl = document.getElementById('activity-feed-count');
+    if (countEl) countEl.textContent = activityBuffer.length;
+
+    if (activityBuffer.length === 0) {
+        feed.innerHTML = '<div class="text-gray-500 text-center py-8">Waiting for Ragnar activity…</div>';
+        return;
+    }
+
+    const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 60;
+
+    feed.innerHTML = activityBuffer.map(entry => {
+        const color = ACTIVITY_SEVERITY_COLORS[entry.severity] || ACTIVITY_SEVERITY_COLORS.info;
+        const details = entry.details
+            ? `<div class="text-xs text-gray-500 ml-6">${escapeHtml(entry.details)}</div>`
+            : '';
+        return `<div class="leading-snug">
+            <span class="text-gray-600 text-xs font-mono mr-1">${escapeHtml(entry.timestamp)}</span>
+            <span class="mr-1">${escapeHtml(entry.icon)}</span>
+            <span class="${color} text-sm">${escapeHtml(entry.message)}</span>
+            ${details}
+        </div>`;
+    }).join('');
+
+    // Keep the latest in view unless the user has scrolled up to read history.
+    if (nearBottom) {
+        feed.scrollTop = feed.scrollHeight;
+    }
+}
+
+function clearActivityFeed() {
+    activityBuffer = [];
+    renderActivityFeed();
+}
+
+function toggleActivityPause() {
+    activityPaused = !activityPaused;
+    const btn = document.getElementById('activity-pause-btn');
+    if (btn) {
+        btn.textContent = activityPaused ? 'Resume' : 'Pause';
+        btn.classList.toggle('bg-Ragnar-600', !activityPaused);
+        btn.classList.toggle('hover:bg-Ragnar-700', !activityPaused);
+        btn.classList.toggle('bg-yellow-600', activityPaused);
+        btn.classList.toggle('hover:bg-yellow-700', activityPaused);
+    }
+    if (!activityPaused) {
+        // Catch up immediately on resume.
+        if (socket && socket.connected) {
+            socket.emit('request_activity');
+        }
     }
 }
 
