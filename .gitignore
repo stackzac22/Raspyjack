@@ -1,4 +1,7 @@
-RPi/
+RPi/*
+# OPi port: shadow package so `import RPi.GPIO` resolves to the libgpiod shim
+!RPi/__init__.py
+!RPi/GPIO.py
 __pycache__/
 
 # --- device-specific / personal config (protect your info) ---
