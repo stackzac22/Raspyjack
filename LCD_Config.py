@@ -135,7 +135,23 @@ else:
     LCD_CS_PIN = 8
     LCD_BL_PIN = 24
 
-    SPI = spidev.SpiDev(0, 0)
+    # SPI bus selection: Raspberry Pi exposes the Waveshare HAT on spidev0.0,
+    # but on the Orange Pi Zero 2W (Allwinner H618) the same header pins are
+    # the SoC's SPI1 -> spidev1.0. Auto-detect via the device-tree model, with
+    # an RJ_SPI_BUS override. (RPi.GPIO here is the libgpiod-backed OPi shim.)
+    _SPI_BUS = 0
+    if "RJ_SPI_BUS" in os.environ:
+        _SPI_BUS = int(os.environ["RJ_SPI_BUS"])
+    else:
+        try:
+            with open("/proc/device-tree/model") as _m:
+                # model is e.g. "OrangePi Zero 2W" (no space) — normalise before matching
+                if "orangepi" in _m.read().lower().replace(" ", ""):
+                    _SPI_BUS = 1
+        except Exception:
+            pass
+
+    SPI = spidev.SpiDev(_SPI_BUS, 0)
 
     def epd_digital_write(pin, value):
         GPIO.output(pin, value)
