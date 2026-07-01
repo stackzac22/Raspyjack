@@ -235,6 +235,139 @@ def wait_for_match(
         time.sleep(max(1, poll_interval_seconds))
 
 
+def watch_presence(
+    targets: list[dict[str, object]],
+    *,
+    scan_window_seconds: int = 4,
+    poll_interval_seconds: int = 2,
+    leave_grace_scans: int = 2,
+    arrive_cooldown_seconds: int = 0,
+    wifi_options: dict[str, object] | None = None,
+    kismet_options: dict[str, object] | None = None,
+    on_event=None,
+) -> None:
+    """Continuously scan and fire per-target callbacks on arrive/leave edges.
+
+    Each target is a dict with any of ``name`` / ``mac`` / ``service_uuid`` (BLE)
+    or ``ssid`` (Wi-Fi) to match on, a ``label`` for logging, and optional
+    ``on_arrive`` / ``on_leave`` callables invoked with the target dict. A target
+    is present when its BLE fields match a scanned device *or* its ``ssid`` is in
+    range. ``wifi_options`` may set ``interface`` and ``rescan`` for SSID scans.
+    Runs until interrupted.
+    """
+    normalized: list[dict[str, object]] = []
+    needs_uuid = False
+    needs_wifi = False
+    needs_kismet = bool(kismet_options and kismet_options.get("enabled"))
+    for target in targets:
+        name = str(target.get("name", "")).strip()
+        mac = str(target.get("mac", "")).strip().upper()
+        uuid = normalize_service_uuid(str(target.get("service_uuid", "")))
+        ssid = str(target.get("ssid", "")).strip()
+        probe = str(target.get("probe", "")).strip()
+        if not (name or mac or uuid or ssid or probe):
+            raise ValueError(
+                f"target {target.get('label', '?')!r} needs name, mac, service_uuid, ssid, or probe"
+            )
+        needs_uuid = needs_uuid or bool(uuid)
+        needs_wifi = needs_wifi or bool(ssid)
+        needs_kismet = needs_kismet or bool(probe)
+        normalized.append(
+            {
+                "target": target,
+                "label": str(target.get("label", "") or mac or name or uuid or ssid or probe),
+                "name": name,
+                "mac": mac,
+                "service_uuid": uuid or "",
+                "ssid": ssid,
+                "probe": probe,
+                "present": False,
+                "miss_count": 0,
+                "last_arrive": 0.0,
+            }
+        )
+
+    needs_ble = any(s["name"] or s["mac"] or s["service_uuid"] for s in normalized)
+    if needs_ble:
+        bt_state = ensure_bluetooth_ready()
+        if not bt_state.get("ready"):
+            raise RuntimeError(
+                f"Bluetooth unavailable: powered={bt_state.get('powered')} "
+                f"power_state={bt_state.get('power_state')}"
+            )
+
+    scan_wifi = None
+    wifi_interface = ""
+    wifi_rescan = False
+    if needs_wifi:
+        try:
+            from ._wifi import scan_wifi_ssids as scan_wifi
+        except ImportError:
+            from _wifi import scan_wifi_ssids as scan_wifi
+        wifi_interface = str(wifi_options.get("interface", "")) if wifi_options else ""
+        wifi_rescan = bool(wifi_options.get("rescan", False)) if wifi_options else False
+
+    kismet_cfg = None
+    kismet_freshness = 120
+    if needs_kismet:
+        try:
+            from ._kismet import fetch_devices, fresh_index, load_kismet_conf
+        except ImportError:
+            from _kismet import fetch_devices, fresh_index, load_kismet_conf
+        kismet_cfg = load_kismet_conf(overrides=kismet_options or {})
+        kismet_freshness = int((kismet_options or {}).get("freshness_seconds", 120))
+
+    grace = max(1, leave_grace_scans)
+    while True:
+        devices = (
+            scan_ble(max(1, scan_window_seconds), include_service_uuids=needs_uuid)
+            if needs_ble
+            else []
+        )
+        wifi_ssids = scan_wifi(wifi_interface, rescan=wifi_rescan) if scan_wifi else set()
+        kismet_idx = {"macs": set(), "names": set(), "probes": set()}
+        if kismet_cfg:
+            kismet_idx = fresh_index(
+                fetch_devices(kismet_cfg["url"], kismet_cfg["user"], kismet_cfg["password"]),
+                kismet_freshness,
+            )
+        now = time.monotonic()
+        for state in normalized:
+            ble_matched = devices_match(
+                devices,
+                name=str(state["name"]),
+                mac=str(state["mac"]),
+                service_uuid=str(state["service_uuid"]),
+            ) if (state["name"] or state["mac"] or state["service_uuid"]) else False
+            ssid_matched = bool(state["ssid"]) and str(state["ssid"]) in wifi_ssids
+            kismet_matched = (
+                (bool(state["probe"]) and str(state["probe"]) in kismet_idx["probes"])
+                or (bool(state["mac"]) and str(state["mac"]) in kismet_idx["macs"])
+                or (bool(state["name"]) and str(state["name"]) in kismet_idx["names"])
+            )
+            matched = ble_matched or ssid_matched or kismet_matched
+            target = state["target"]
+            if matched:
+                state["miss_count"] = 0
+                if not state["present"]:
+                    cooled = now - float(state["last_arrive"]) >= arrive_cooldown_seconds
+                    state["present"] = True
+                    state["last_arrive"] = now
+                    if on_event:
+                        on_event("arrive", state["label"], target)
+                    if cooled and callable(target.get("on_arrive")):
+                        target["on_arrive"](target)
+            elif state["present"]:
+                state["miss_count"] = int(state["miss_count"]) + 1
+                if state["miss_count"] >= grace:
+                    state["present"] = False
+                    if on_event:
+                        on_event("leave", state["label"], target)
+                    if callable(target.get("on_leave")):
+                        target["on_leave"](target)
+        time.sleep(max(1, poll_interval_seconds))
+
+
 def add_common_wait_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("--name", default="")
     parser.add_argument("--mac", default="")
