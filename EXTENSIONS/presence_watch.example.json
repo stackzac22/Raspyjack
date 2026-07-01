@@ -1,0 +1,43 @@
+{
+  "scan_window_seconds": 5,
+  "poll_interval_seconds": 3,
+  "leave_grace_scans": 4,
+  "arrive_cooldown_seconds": 120,
+  "wifi_options": {
+    "interface": "",
+    "rescan": false
+  },
+  "kismet": {
+    "enabled": true,
+    "url": "http://127.0.0.1:2501",
+    "freshness_seconds": 120
+  },
+  "targets": [
+    {
+      "label": "moms_phone",
+      "comment": "match by an SSID her phone keeps probing for (stable even as MAC rotates)",
+      "probe": "MomsHomeWiFi",
+      "on_arrive": "logger -t presence 'mom arrived'; python3 /root/Raspyjack/EXTENSIONS/run_payload.py utilities/your_payload.py mom_here",
+      "on_leave": "logger -t presence 'mom left'"
+    },
+    {
+      "label": "work_phone",
+      "comment": "match by MAC seen in Kismet (works until it re-randomizes)",
+      "mac": "AA:BB:CC:DD:EE:FF",
+      "on_arrive": "logger -t presence 'work phone arrived'"
+    },
+    {
+      "label": "weird_device",
+      "comment": "a device you flagged from probe_discover.py, tracked by its probe string",
+      "probe": "Pullupwiththestick24",
+      "on_arrive": "logger -t presence 'weird device is nearby'"
+    },
+    {
+      "label": "me_via_hotspot",
+      "comment": "BLE/Wi-Fi still work too; ssid = a network in range",
+      "ssid": "MyPhoneHotspot",
+      "on_arrive": "logger -t presence 'I arrived'",
+      "on_leave": "logger -t presence 'I left'"
+    }
+  ]
+}
