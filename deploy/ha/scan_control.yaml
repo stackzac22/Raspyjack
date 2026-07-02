@@ -1,0 +1,153 @@
+# /config/packages/scan_control.yaml  (Home Assistant, Pi 4)
+#
+# Voice + dashboard control of the RaspyJack Wi-Fi capture stack.
+#
+#   Pyramid voice / dashboard toggle
+#        |  (HA switch)
+#        v
+#   raspyjack/<node>/scan/set   -->  rj-scan-agent on the node  -->  rj-scan on|off
+#        ^                                                              |
+#        +--- raspyjack/<node>/scan/state (retained) <------------------+
+#             raspyjack/<node>/scan/avail (LWT)  = switch availability
+#
+# Deploy: copy to /config/packages/scan_control.yaml, `ha core check`,
+#         then `ha core restart` (packages need a full restart, not reload).
+#
+# Broker account = the shared 'netsurvey' Mosquitto user (same as the other
+# RaspyJack bridges). Confirmation is spoken back through the Assist pipeline,
+# which plays on the Atom/Pyramid satellite the user is talking to.
+
+mqtt:
+  switch:
+    - name: "Jack Wi-Fi scan"
+      unique_id: raspyjack_jack_wifi_scan
+      icon: mdi:radar
+      command_topic: "raspyjack/jack/scan/set"
+      payload_on: "on"
+      payload_off: "off"
+      state_topic: "raspyjack/jack/scan/state"
+      state_on: "on"
+      state_off: "off"
+      availability_topic: "raspyjack/jack/scan/avail"
+      payload_available: "online"
+      payload_not_available: "offline"
+      optimistic: false
+      qos: 1
+      retain: false
+
+    - name: "Opi Wi-Fi scan"
+      unique_id: raspyjack_opi_wifi_scan
+      icon: mdi:radar
+      command_topic: "raspyjack/opi/scan/set"
+      payload_on: "on"
+      payload_off: "off"
+      state_topic: "raspyjack/opi/scan/state"
+      state_on: "on"
+      state_off: "off"
+      availability_topic: "raspyjack/opi/scan/avail"
+      payload_available: "online"
+      payload_not_available: "offline"
+      optimistic: false
+      qos: 1
+      retain: false
+
+automation:
+  # ---- jack: stop -----------------------------------------------------------
+  - id: rj_scan_stop_jack
+    alias: "RJ scan — stop on jack (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "stop scanning on jack"
+          - "stop [the] (wifi|wi-fi|kismet) scanning on jack"
+          - "stop kismet on jack"
+          - "jack stop scanning"
+          - "kill scanning on jack"
+          - "turn off scanning on jack"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.jack_wi_fi_scan
+      - set_conversation_response: "Stopping Wi-Fi scanning on jack. He's safe to use now."
+
+  # ---- jack: start ----------------------------------------------------------
+  - id: rj_scan_start_jack
+    alias: "RJ scan — start on jack (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "start scanning on jack"
+          - "start [the] (wifi|wi-fi|kismet) scanning on jack"
+          - "start kismet on jack"
+          - "resume scanning on jack"
+          - "jack start scanning"
+          - "turn on scanning on jack"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.jack_wi_fi_scan
+      - set_conversation_response: "Starting Wi-Fi scanning on jack."
+
+  # ---- handoff: jack -> opi --------------------------------------------------
+  - id: rj_scan_handoff_to_opi
+    alias: "RJ scan — hand off to opi (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "hand [off] scanning to opi"
+          - "have opi take over [the] scanning"
+          - "switch scanning to opi"
+          - "move scanning to opi"
+          - "let opi take over scanning"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.jack_wi_fi_scan
+      - service: switch.turn_on
+        target:
+          entity_id: switch.opi_wi_fi_scan
+      - set_conversation_response: "Stopping jack and handing Wi-Fi scanning over to opi."
+
+  # ---- handoff: opi -> jack --------------------------------------------------
+  - id: rj_scan_handoff_to_jack
+    alias: "RJ scan — hand back to jack (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "hand [off] scanning back to jack"
+          - "give scanning back to jack"
+          - "switch scanning back to jack"
+          - "let jack take over scanning"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.opi_wi_fi_scan
+      - service: switch.turn_on
+        target:
+          entity_id: switch.jack_wi_fi_scan
+      - set_conversation_response: "Handing Wi-Fi scanning back to jack."
+
+  # ---- status query ----------------------------------------------------------
+  - id: rj_scan_status_query
+    alias: "RJ scan — status (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "(is|are) [we] scanning"
+          - "who is scanning"
+          - "scanning status"
+          - "what is the scanning status"
+          - "is jack scanning"
+    action:
+      - set_conversation_response: >-
+          {% set jack = states('switch.jack_wi_fi_scan') %}
+          {% set opi = states('switch.opi_wi_fi_scan') %}
+          {% if jack == 'on' %}Jack is scanning.
+          {% elif opi == 'on' %}Opi is scanning; jack is idle.
+          {% elif jack == 'unavailable' and opi == 'unavailable' %}No scanner is reachable.
+          {% else %}Scanning is off on both jack and opi.{% endif %}
