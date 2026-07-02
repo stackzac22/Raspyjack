@@ -151,3 +151,27 @@ automation:
           {% elif opi == 'on' %}Opi is scanning; jack is idle.
           {% elif jack == 'unavailable' and opi == 'unavailable' %}No scanner is reachable.
           {% else %}Scanning is off on both jack and opi.{% endif %}
+
+  # ---- Atom heartbeat: cyan when EITHER node scans -----------------------------
+  # The Pyramid firmware reads binary_sensor.raspyjack_monitor_mode (topic
+  # homeassistant/raspyjack/monitor) — historically jack-only. Reflect the
+  # combined scan-switch state so the heartbeat turns cyan whether jack OR opi
+  # is the active scanner (was staying red when scanning moved to opi).
+  - id: rj_scan_reflect_monitor_led
+    alias: "RJ scan — reflect combined scan state to Atom heartbeat"
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id:
+          - switch.jack_wi_fi_scan
+          - switch.opi_wi_fi_scan
+      - platform: homeassistant
+        event: start
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/raspyjack/monitor"
+          retain: true
+          qos: 1
+          payload: >-
+            {% if is_state('switch.jack_wi_fi_scan','on') or is_state('switch.opi_wi_fi_scan','on') %}ON{% else %}OFF{% endif %}
