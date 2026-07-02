@@ -65,6 +65,9 @@ automation:
           - "jack stop scanning"
           - "kill scanning on jack"
           - "turn off scanning on jack"
+          - "[turn] [the] [kismet] scan off (on|for) jack"
+          - "[turn] kismet off (on|for) jack"
+          - "scanning off (on|for) jack"
     action:
       - service: switch.turn_off
         target:
@@ -84,6 +87,9 @@ automation:
           - "resume scanning on jack"
           - "jack start scanning"
           - "turn on scanning on jack"
+          - "[turn] [the] [kismet] scan on (on|for) jack"
+          - "[turn] kismet on (on|for) jack"
+          - "scanning on (on|for) jack"
     action:
       - service: switch.turn_on
         target:
