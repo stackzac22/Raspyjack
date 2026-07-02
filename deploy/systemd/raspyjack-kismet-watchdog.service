@@ -1,0 +1,15 @@
+[Unit]
+Description=RaspyJack Kismet capture watchdog (rtw88 DFS wedge auto-recovery)
+After=kismet.service network-online.target
+Wants=kismet.service
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /usr/local/bin/kismet_capture_watchdog.py
+SyslogIdentifier=kismet-watchdog
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
