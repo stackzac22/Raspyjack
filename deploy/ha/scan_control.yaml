@@ -155,9 +155,9 @@ automation:
           - "move scanning to opi"
           - "let opi take over scanning"
           # "from jack to opi" phrasings (+ Whisper opi mis-spellings)
-          - "switch [the] [(wifi|wi-fi|wi fi)] [scanning] from jack to (opi|op|o pi|o p i|o o p|oh pi|opie)"
-          - "(move|hand|give|send) [the] [scanning] from jack to (opi|op|o pi|o p i|o o p|oh pi|opie)"
-          - "from jack to (opi|op|o pi|o p i|o o p|oh pi|opie)"
+          - "switch [the] [(wifi|wi-fi|wi fi)] [scanning] from jack to (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob)"
+          - "(move|hand|give|send) [the] [scanning] from jack to (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob)"
+          - "from jack to (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob)"
     action:
       - service: switch.turn_off
         target:
@@ -179,9 +179,9 @@ automation:
           - "switch scanning back to jack"
           - "let jack take over scanning"
           # "from opi to jack" phrasings (+ Whisper opi mis-spellings)
-          - "switch [the] [(wifi|wi-fi|wi fi)] [scanning] from (opi|op|o pi|o p i|o o p|oh pi|opie) to jack"
-          - "(move|hand|give|send) [the] [scanning] from (opi|op|o pi|o p i|o o p|oh pi|opie) to jack"
-          - "from (opi|op|o pi|o p i|o o p|oh pi|opie) to jack"
+          - "switch [the] [(wifi|wi-fi|wi fi)] [scanning] from (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob) to jack"
+          - "(move|hand|give|send) [the] [scanning] from (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob) to jack"
+          - "from (opi|op|o pi|o p i|o o p|oh pi|opie|obi wan|obi|obie|o b|ob) to jack"
     action:
       - service: switch.turn_off
         target:
