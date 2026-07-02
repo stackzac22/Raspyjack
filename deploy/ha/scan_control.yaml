@@ -96,6 +96,52 @@ automation:
           entity_id: switch.jack_wi_fi_scan
       - set_conversation_response: "Starting Wi-Fi scanning on jack."
 
+  # ---- opi: start (standalone, does NOT touch jack) --------------------------
+  - id: rj_scan_start_opi
+    alias: "RJ scan — start on opi (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "start scanning on opi"
+          - "start [the] (wifi|wi-fi|kismet) scanning on opi"
+          - "start kismet on opi"
+          - "resume scanning on opi"
+          - "opi start scanning"
+          - "start opi scanning"
+          - "turn on scanning on opi"
+          - "[turn] [the] [kismet] scan on (on|for) opi"
+          - "[turn] kismet on (on|for) opi"
+          - "scanning on (on|for) opi"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.opi_wi_fi_scan
+      - set_conversation_response: "Starting Wi-Fi scanning on opi."
+
+  # ---- opi: stop (standalone, does NOT touch jack) ---------------------------
+  - id: rj_scan_stop_opi
+    alias: "RJ scan — stop on opi (voice)"
+    mode: single
+    trigger:
+      - platform: conversation
+        command:
+          - "stop scanning on opi"
+          - "stop [the] (wifi|wi-fi|kismet) scanning on opi"
+          - "stop kismet on opi"
+          - "opi stop scanning"
+          - "stop opi scanning"
+          - "kill scanning on opi"
+          - "turn off scanning on opi"
+          - "[turn] [the] [kismet] scan off (on|for) opi"
+          - "[turn] kismet off (on|for) opi"
+          - "scanning off (on|for) opi"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.opi_wi_fi_scan
+      - set_conversation_response: "Stopping Wi-Fi scanning on opi."
+
   # ---- handoff: jack -> opi --------------------------------------------------
   - id: rj_scan_handoff_to_opi
     alias: "RJ scan — hand off to opi (voice)"
