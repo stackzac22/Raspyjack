@@ -1,32 +1,67 @@
 #!/usr/bin/env bash
-# rj-scan — toggle jack's Wi-Fi capture stack on/off.
+# rj-scan — toggle a node's Wi-Fi capture stack on/off.
 #
-# The rtw88 (8821cu) USB adapter can hard-lock the kernel while Kismet is
-# channel-hopping it. When you use jack for non-Wi-Fi work, `rj-scan off` stops
-# Kismet and idles the dongle so the crash-prone path isn't running. `rj-scan on`
-# brings it back. Only touches wlan1 — the built-in wlan0 uplink is untouched.
+# The rtw88 (8821cu / BrosTrend) USB adapter can hard-lock the kernel while
+# Kismet is channel-hopping it. When you use the box for non-Wi-Fi work,
+# `rj-scan off` stops Kismet and idles the dongle so the crash-prone path isn't
+# running. `rj-scan on` brings it back. Only touches the capture iface — the
+# built-in uplink (wlan0) is untouched.
+#
+# Node-specific values come from /etc/raspyjack/scan.conf (optional). Defaults
+# below match jack (raspyjackboy). On a fresh node (e.g. opi) drop a scan.conf
+# with the right SCAN_IFACE / EXTRA_SERVICES.
+#
+#   SCAN_IFACE=wlan1                      # monitor/capture interface
+#   KISMET_SERVICE=kismet                 # main capture service
+#   EXTRA_SERVICES="raspyjack-kismet-watchdog"  # space-sep, started after / stopped before kismet
+#
+# Subcommands:
+#   on | off | status        human-facing
+#   state                     machine-readable: prints exactly "on" or "off"
 set -e
+
+SCAN_IFACE=wlan1
+KISMET_SERVICE=kismet
+EXTRA_SERVICES="raspyjack-kismet-watchdog"
+
+CONF=/etc/raspyjack/scan.conf
+if [ -r "$CONF" ]; then
+  # shellcheck disable=SC1090
+  . "$CONF"
+fi
+
+is_on() {
+  [ "$(systemctl is-active "$KISMET_SERVICE" 2>/dev/null)" = "active" ]
+}
+
 case "${1:-status}" in
   off)
     echo "[rj-scan] stopping capture stack..."
-    systemctl stop raspyjack-kismet-watchdog kismet 2>/dev/null || true
-    iw dev wlan1mon del 2>/dev/null || true
-    ip link set wlan1 down 2>/dev/null || true
-    echo "[rj-scan] OFF — kismet + watchdog stopped, wlan1 down (dongle idle)"
+    # stop watchdog/extras first so they don't try to revive kismet
+    systemctl stop $EXTRA_SERVICES "$KISMET_SERVICE" 2>/dev/null || true
+    iw dev "${SCAN_IFACE}mon" del 2>/dev/null || true
+    ip link set "$SCAN_IFACE" down 2>/dev/null || true
+    echo "[rj-scan] OFF — $KISMET_SERVICE + extras stopped, $SCAN_IFACE down (dongle idle)"
     ;;
   on)
     echo "[rj-scan] starting capture stack..."
-    ip link set wlan1 up 2>/dev/null || true
-    systemctl start kismet raspyjack-kismet-watchdog
-    echo "[rj-scan] ON — kismet + watchdog started"
+    ip link set "$SCAN_IFACE" up 2>/dev/null || true
+    systemctl start "$KISMET_SERVICE" $EXTRA_SERVICES
+    echo "[rj-scan] ON — $KISMET_SERVICE + extras started"
     ;;
   status)
-    echo "kismet:            $(systemctl is-active kismet 2>/dev/null)"
-    echo "kismet-watchdog:   $(systemctl is-active raspyjack-kismet-watchdog 2>/dev/null)"
+    echo "kismet:            $(systemctl is-active "$KISMET_SERVICE" 2>/dev/null)"
+    for s in $EXTRA_SERVICES; do
+      echo "$s: $(systemctl is-active "$s" 2>/dev/null)"
+    done
     echo "presence:          $(systemctl is-active raspyjack-presence 2>/dev/null)"
+    echo "capture iface:     $SCAN_IFACE"
     echo "interfaces:"
     iw dev 2>/dev/null | grep -E "Interface|type" | sed 's/^/  /'
     ;;
+  state)
+    if is_on; then echo on; else echo off; fi
+    ;;
   *)
-    echo "usage: rj-scan {on|off|status}"; exit 1 ;;
+    echo "usage: rj-scan {on|off|status|state}"; exit 1 ;;
 esac

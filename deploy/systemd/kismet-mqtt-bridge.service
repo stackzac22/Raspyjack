@@ -1,0 +1,16 @@
+[Unit]
+Description=Kismet -> MQTT alert bridge (RaspyJack)
+After=network-online.target kismet.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/bin/kismet_mqtt_bridge.py
+Environment=KISMET_MQTT_CONF=/etc/raspyjack/kismet_mqtt.conf
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target

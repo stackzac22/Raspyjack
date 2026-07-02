@@ -1,0 +1,16 @@
+[Unit]
+Description=RaspyJack scan-agent — remote on/off control of the Wi-Fi capture stack over MQTT
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/env python3 /usr/local/bin/rj-scan-agent.py
+Restart=on-failure
+RestartSec=5
+# Needs root to run `rj-scan` (systemctl start/stop kismet, ip link, iw).
+User=root
+
+[Install]
+WantedBy=multi-user.target
