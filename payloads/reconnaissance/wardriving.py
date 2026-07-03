@@ -268,49 +268,75 @@ def _gpsd_sat_poller():
 
 
 def _gps_updater():
-    """Background thread: poll gpsd for position updates."""
-    global gps_data, gps_ready
+    """Background thread: read gpsd's JSON socket directly for position fixes.
 
-    if not GPSD_OK:
-        return
+    Uses a timeout-based socket read instead of gpsd.get_current(), which
+    blocks indefinitely when the receiver has no fix or the USB link stalls
+    (e.g. a power-starved dongle sharing the bus). This keeps the payload
+    responsive and the GPS view alive even with no lock.
+    """
+    global gps_data, gps_ready
+    import socket as _sock
+    import json as _j
 
     _start_gpsd()
-
-    try:
-        gpsd_mod.connect()
-    except Exception:
-        return
-
     gps_ready = True
     threading.Thread(target=_gpsd_sat_poller, daemon=True).start()
 
-    _no_fix_count = 0
     while not _shutdown.is_set():
         try:
-            pkt = gpsd_mod.get_current()
-            if hasattr(pkt, 'mode') and pkt.mode >= 2:
-                _no_fix_count = 0
-                with lock:
-                    gps_data = {
-                        "lat": pkt.lat,
-                        "lon": pkt.lon,
-                        "alt": pkt.alt if pkt.mode >= 3 else 0,
-                        "speed": getattr(pkt, 'hspeed', 0),
-                        "sats": _gps_sats_used,
-                        "sats_visible": _gps_sats_visible,
-                        "mode": pkt.mode,
-                        "ts": time.time(),
-                    }
-            else:
-                _no_fix_count += 1
-                if _no_fix_count > 150:
-                    with lock:
-                        if gps_data:
-                            gps_data["mode"] = 0
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_STREAM)
+            s.settimeout(5)
+            s.connect(("127.0.0.1", 2947))
+            s.sendall(b'?WATCH={"enable":true,"json":true}\n')
+            buf = ""
+            _no_fix = 0
+            while not _shutdown.is_set():
+                try:
+                    data = s.recv(4096).decode("utf-8", errors="ignore")
+                except _sock.timeout:
+                    # no data (no fix / stalled link): stay responsive, flag no-fix
+                    _no_fix += 1
+                    if _no_fix > 3:
+                        with lock:
+                            if gps_data:
+                                gps_data["mode"] = 0
+                    continue
+                if not data:
+                    break
+                buf += data
+                while "\n" in buf:
+                    line, buf = buf.split("\n", 1)
+                    if '"class":"TPV"' not in line:
+                        continue
+                    try:
+                        tpv = _j.loads(line)
+                    except Exception:
+                        continue
+                    mode = tpv.get("mode", 0)
+                    if mode >= 2 and "lat" in tpv and "lon" in tpv:
+                        _no_fix = 0
+                        with lock:
+                            gps_data = {
+                                "lat": tpv.get("lat", 0.0),
+                                "lon": tpv.get("lon", 0.0),
+                                "alt": tpv.get("alt", 0) if mode >= 3 else 0,
+                                "speed": tpv.get("speed", 0),
+                                "sats": _gps_sats_used,
+                                "sats_visible": _gps_sats_visible,
+                                "mode": mode,
+                                "ts": time.time(),
+                            }
+                    else:
+                        _no_fix += 1
+                        if _no_fix > 3:
+                            with lock:
+                                if gps_data:
+                                    gps_data["mode"] = 0
+            s.close()
         except Exception:
             pass
-
-        if _shutdown.wait(timeout=0.2):
+        if _shutdown.wait(timeout=3):
             break
 
 
@@ -1063,6 +1089,11 @@ def _assign_card_roles(ifaces):
     if not ifaces:
         return [], None
     if len(ifaces) == 1:
+        # A lone monitor-capable USB card (e.g. MT7921/RTL88xx) should run in
+        # monitor mode for wardriving, not managed active-scan.
+        only = ifaces[0]
+        if _get_driver(only) in KNOWN_MONITOR_DRIVERS:
+            return [], only
         return ifaces, None
 
     monitor_capable = []
@@ -2634,10 +2665,18 @@ def main():
                         t.start()
                         threads.append(t)
 
-                    # Always include wlan0 as scanner
+                    # wlan0 fallback scanner — but NEVER when it is the network
+                    # uplink (has an IP): active-scanning the uplink NIC drops
+                    # connectivity (SSH/tailscale). Only use wlan0 as a last
+                    # resort when no USB card is scanning and it isn't the uplink.
                     if os.path.isdir("/sys/class/net/wlan0/wireless"):
+                        _w0 = subprocess.run(
+                            ["ip", "-o", "-4", "addr", "show", "wlan0"],
+                            capture_output=True, text=True)
+                        wlan0_uplink = bool(_w0.stdout.strip())
                         wlan0_in_use = "wlan0" in active_cards or (monitor_card == "wlan0")
-                        if not wlan0_in_use:
+                        if (not wlan0_in_use and not wlan0_uplink
+                                and not active_cards and not mon_ifaces):
                             card_state["wlan0"] = {
                                 "channel": 0, "channels": [],
                                 "band": "onboard", "driver": "brcmfmac",
