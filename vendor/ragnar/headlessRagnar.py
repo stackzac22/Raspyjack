@@ -247,8 +247,9 @@ if __name__ == "__main__":
         # Start web server if enabled
         if shared_data.config.get("websrv", True):
             logger.info("Starting the web server...")
+            _web_port = int(os.environ.get("RAGNAR_PORT", "8091"))
             web_thread = threading.Thread(
-                target=run_server, name="RagnarWeb", daemon=True
+                target=run_server, kwargs={"port": _web_port}, name="RagnarWeb", daemon=True
             )
             web_thread.start()
         else:
