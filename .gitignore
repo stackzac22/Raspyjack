@@ -45,3 +45,6 @@ wifi/configs/
 
 # --- frame mirrors / runtime scratch ---
 *.frame
+
+# --- local reference clones (not part of this repo's tracked tree) ---
+reference/
