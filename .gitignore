@@ -48,3 +48,23 @@ wifi/configs/
 
 # --- frame mirrors / runtime scratch ---
 *.frame
+loot/SquachWatch/
+
+# --- nested repos with their own git history (Ragnar is updated by
+#     update_ragnar.sh + /usr/local/share/ragnar-local-patches, not by us) ---
+vendor/ragnar/
+vendor/RagnarScripts/
+
+# --- machine-local secrets, state and backups: never commit ---
+.wdgwars_key
+.webui_auth.json.*
+config/ai_report.json*
+config/ssid_pool/
+wifi/profiles/
+wifi/*.log
+models/
+*.bak-*
+*.bak.*
+
+# --- run output (already-tracked loot templates stay tracked) ---
+loot/*
