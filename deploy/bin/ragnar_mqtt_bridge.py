@@ -33,7 +33,7 @@ except ImportError:
 DEFAULTS = {
     # MQTT broker (Home Assistant's Mosquitto, on the tailnet) — reuses the
     # same known-good 'netsurvey' account the Kismet bridge uses.
-    "MQTT_HOST": "100.127.43.75",
+    "MQTT_HOST": "100.83.131.77",
     "MQTT_PORT": "1883",
     "MQTT_TLS": "false",
     "MQTT_USER": "netsurvey",

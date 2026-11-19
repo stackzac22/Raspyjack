@@ -39,7 +39,7 @@ except ImportError:
     sys.exit(1)
 
 DEFAULTS = {
-    "MQTT_HOST": "100.127.43.75",      # homeassistant on the tailnet
+    "MQTT_HOST": "100.83.131.77",      # mosquitto on raspyjacked (old HAOS broker died 7/10)
     "MQTT_PORT": "1883",
     "MQTT_USER": "netsurvey",
     "MQTT_PASS": "",

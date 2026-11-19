@@ -8,7 +8,7 @@ except ImportError:
     sys.stderr.write("paho-mqtt missing\n"); sys.exit(1)
 
 def load_conf(path="/etc/raspyjack/ragnar_mqtt.conf"):
-    cfg = {"MQTT_HOST": "100.127.43.75", "MQTT_PORT": "1883",
+    cfg = {"MQTT_HOST": "100.83.131.77", "MQTT_PORT": "1883",
            "MQTT_USER": "netsurvey", "MQTT_PASS": ""}
     try:
         for line in open(path):
