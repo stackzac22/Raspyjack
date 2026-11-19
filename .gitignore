@@ -38,6 +38,7 @@ loot/**/*.john
 loot/**/*.potfile
 loot/**/*.xml
 loot/Responder/
+loot/SquachWatch/
 loot/Handshakes/
 loot/Credentials/
 loot/Screenshots/
