@@ -77,6 +77,13 @@ if _DISPLAY_TYPE == "CARDPUTER_320":
     LCD_Y = 0
     LCD_X_MAXPIXEL = 320
     LCD_Y_MAXPIXEL = 170
+elif _DISPLAY_TYPE == "FB_480x320":
+    LCD_WIDTH  = 480
+    LCD_HEIGHT = 320
+    LCD_X = 0
+    LCD_Y = 0
+    LCD_X_MAXPIXEL = 480
+    LCD_Y_MAXPIXEL = 320
 elif _DISPLAY_TYPE == "ST7789_240":
     LCD_WIDTH  = 240
     LCD_HEIGHT = 240
@@ -97,7 +104,7 @@ else:
 # Scale helper – payloads import this: from LCD_1in44 import S
 # All coordinates are authored for 128; S() adapts them to the actual panel.
 # ---------------------------------------------------------------------------
-if _DISPLAY_TYPE == "CARDPUTER_320":
+if _DISPLAY_TYPE in ("CARDPUTER_320", "FB_480x320"):
     LCD_SCALE = LCD_HEIGHT / 128  # 1.328 — use height (constraining dimension) for widescreen
 else:
     LCD_SCALE = LCD_WIDTH / 128  # 1.0 on 128x128, 1.875 on 240x240
@@ -482,7 +489,7 @@ class LCD:
         if (LCD_Config.GPIO_Init() != 0):
             return -1
 
-        if self.display_type == "CARDPUTER_320":
+        if self.display_type in ("CARDPUTER_320", "FB_480x320"):
             return 0
 
         # Set SPI speed based on display type
@@ -537,7 +544,7 @@ class LCD:
         self.LCD_WriteReg(0x2C)
 
     def LCD_Clear(self):
-        if self.display_type == "CARDPUTER_320":
+        if self.display_type in ("CARDPUTER_320", "FB_480x320"):
             LCD_Config.fb_write(b'\x00' * LCD_Config.FB_SIZE)
             return
         _buffer = [0x00]*(self.width * self.height * 2)
@@ -555,7 +562,7 @@ class LCD:
         if imwidth != self.width or imheight != self.height:
             Image = Image.resize((self.width, self.height))
 
-        if self.display_type == "CARDPUTER_320":
+        if self.display_type in ("CARDPUTER_320", "FB_480x320"):
             img = Image.convert("RGB")
             arr = np.asarray(img)
             r = (arr[..., 0].astype(np.uint16) >> 3) << 11

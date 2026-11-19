@@ -55,9 +55,9 @@ if _DISPLAY_TYPE != "CARDPUTER_320":
             pass
 
 
-if _DISPLAY_TYPE == "CARDPUTER_320":
+if _DISPLAY_TYPE in ("CARDPUTER_320", "FB_480x320"):
     # ===================================================================
-    # CardputerZero: framebuffer stub (no SPI, no GPIO for display)
+    # Framebuffer stub (no SPI, no GPIO for display): CardputerZero + 3.5" fbtft
     # ===================================================================
     import mmap
 
@@ -79,8 +79,12 @@ if _DISPLAY_TYPE == "CARDPUTER_320":
                         break
             except Exception:
                 pass
-    FB_WIDTH = 320
-    FB_HEIGHT = 170
+    if _DISPLAY_TYPE == "FB_480x320":
+        FB_WIDTH = 480
+        FB_HEIGHT = 320
+    else:
+        FB_WIDTH = 320
+        FB_HEIGHT = 170
     FB_BPP = 16
     FB_SIZE = FB_WIDTH * FB_HEIGHT * (FB_BPP // 8)
 
