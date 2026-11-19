@@ -196,7 +196,7 @@ fi
 # ───── 2 ▸ install / upgrade required APT packages ───────────
 PACKAGES=(
   python3 python3-pip python3-dev \
-  python3-scapy python3-netifaces python3-pyudev python3-serial \
+  python3-scapy python3-netifaces python3-pyudev python3-serial python3-paho-mqtt \
   python3-smbus python3-rpi.gpio python3-spidev python3-pil python3-qrcode python3-numpy \
   python3-setuptools python3-cryptography python3-requests python3-websockets \
   python3-evdev \
@@ -257,6 +257,8 @@ sudo pip3 install --upgrade yt-dlp --break-system-packages --ignore-installed yt
 
 # GPS python library
 step "Installing gpsd-py3 …"
+sudo pip3 install --break-system-packages meshtastic 2>/dev/null \
+  || warn "meshtastic pip install failed – signot mesh bridge will not run"
 sudo pip3 install --break-system-packages gpsd-py3 2>/dev/null \
   || warn "gpsd-py3 install failed – wardriving GPS may not work"
 

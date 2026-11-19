@@ -1,0 +1,16 @@
+[Unit]
+Description=SquachWatch serial -> MQTT bridge (signot fleet)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Settings live outside git: copy squachwatch-bridge.env.example to
+# /etc/default/squachwatch-bridge and fill it in.
+EnvironmentFile=/etc/default/squachwatch-bridge
+ExecStart=/usr/bin/python3 /root/Raspyjack/scripts/squachwatch_bridge.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
