@@ -1,0 +1,15 @@
+[Unit]
+Description=signot mesh bridge (Meshtastic radio <-> MQTT, fleet alerts -> Wardrive Go)
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/signot-mesh-bridge
+ExecStart=/usr/bin/python3 /root/Raspyjack/scripts/mesh_bridge.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+#!/bin/sh
+# RaspyJack: NetworkManager dispatcher hook (/etc/NetworkManager/dispatcher.d/).
+# When an uplink comes up or its DHCP lease changes:
+#  1. regenerate the Caddyfile so https://<new-ip>/ (as listed by the WebUI
+#     payload) is served -- the autoconfig otherwise runs only at boot;
+#  2. if tailscaled's policy-routing table (52) has been emptied by the link
+#     change, restart tailscaled. Without table 52, replies to tailnet peers
+#     leave by the LAN default route and are dropped: the WebUI (:8080/:443)
+#     and Ragnar (:8000) go unreachable over Tailscale while Tailscale SSH,
+#     which never touches kernel routing, keeps working -- easy to misread.
+IFACE="$1"; ACTION="$2"
+case "$IFACE" in lo|tailscale*|docker*|veth*|br-*) exit 0 ;; esac
+case "$ACTION" in up|dhcp4-change|connectivity-change) ;; *) exit 0 ;; esac
+(
+  sleep 8   # let tailscaled finish its own rebind first
+  [ -x /usr/local/sbin/raspyjack-caddy-autoconfig.sh ] && /usr/local/sbin/raspyjack-caddy-autoconfig.sh >/dev/null 2>&1
+  if systemctl is-active --quiet tailscaled && ip link show tailscale0 >/dev/null 2>&1 \
+     && [ -z "$(ip route show table 52 2>/dev/null)" ]; then
+    logger -t raspyjack-net-heal "tailscale route table 52 empty after $IFACE $ACTION; restarting tailscaled"
+    systemctl restart tailscaled
+  fi
+) >/dev/null 2>&1 &
+exit 0
